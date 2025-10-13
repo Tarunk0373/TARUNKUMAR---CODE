@@ -1,0 +1,192 @@
+import React, { useState } from "react";
+
+export default function UserAdmin() {
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const initialRows = [
+    {
+      id: 1,
+      userName: "Lucifer",
+      adGroup: "Wealth compliance",
+      folder: "Compliance",
+      reportName: `KYC reports, AML reports, Dormant reports`,
+      status: "added",
+      dateISO: "2025-10-12",
+    },
+    {
+      id: 2,
+      userName: "James",
+      adGroup: "Wealth user admin",
+      folder: "Global user",
+      reportName: "Active User, Inactive user",
+      status: "pending",
+      dateISO: "",
+    },
+    {
+      id: 3,
+      userName: "William",
+      adGroup: "Retail compliance",
+      folder: "Compliance",
+      reportName: "Customer risk reports, fraud reports",
+      status: "pending",
+      dateISO: "",
+    },
+    {
+      id: 4,
+      userName: "Johnson",
+      adGroup: "Corporate user",
+      folder: "Corporate",
+      reportName: "Account summary, credit exposure reports",
+      status: "added",
+      dateISO: "2025-10-10",
+    },
+  ];
+
+  const [rows, setRows] = useState(initialRows);
+  const [search, setSearch] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+
+  function formatDate(iso) {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    const day = String(d.getDate()).padStart(2, "0");
+    const months = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
+    const mon = months[d.getMonth()];
+    const yr = d.getFullYear();
+    return `${day}-${mon}-${yr}`;
+  }
+
+  function resetAll() {
+    setRows(initialRows);
+    setSearch("");
+    setFilterDate("");
+  }
+
+  function tagUser(id) {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "added", dateISO: todayISO } : r
+      )
+    );
+  }
+
+  function denyUser(id) {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "denied", dateISO: todayISO } : r
+      )
+    );
+  }
+
+  const filtered = rows.filter((r) => {
+    const text = (
+      r.userName +
+      " " +
+      r.adGroup +
+      " " +
+      r.folder +
+      " " +
+      r.reportName
+    ).toLowerCase();
+
+    const okText = search ? text.includes(search.toLowerCase()) : true;
+
+    let okDate = true;
+    if (filterDate) okDate = r.dateISO ? r.dateISO >= filterDate : false;
+
+    return okText && okDate;
+  });
+
+  return (
+    <div>
+      <header>
+        <div className="wrap">
+          <div className="brand">
+            {/* Adjust the src path to where your image actually is */}
+            <img src="/SCB_LOGO_1.png" alt="Standard Chartered Logo" />
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="user-info">
+          <div className="search-top">
+            <button
+              id="home-btn"
+              className="home-btn"
+              title="Go to Home"
+              onClick={resetAll}
+            >
+              Home
+            </button>
+
+            <input
+              type="date"
+              id="filter-date"
+              className="date-box"
+              aria-label="Filter by Date Updated"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+            />
+
+            <input
+              type="text"
+              id="search"
+              className="search-box"
+              placeholder="Search user"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="user-row">
+            <h1>User Admin</h1>
+            <p>admin@gmail.com</p>
+          </div>
+        </section>
+
+        <h2 className="table-heading">User Access Requests</h2>
+
+        <table id="userTable">
+          <thead>
+            <tr>
+              <th>User Name</th>
+              <th>AD Group</th>
+              <th>Folder</th>
+              <th>Report Name</th>
+              <th>Status</th>
+              <th>Date Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((r) => (
+              <tr key={r.id}>
+                <td>{r.userName}</td>
+                <td>{r.adGroup}</td>
+                <td>{r.folder}</td>
+                <td>{r.reportName}</td>
+                <td>{r.status}</td>
+                <td>{formatDate(r.dateISO)}</td>
+                <td>
+                  <button onClick={() => tagUser(r.id)}>Tag to AD</button>{" "}
+                  <button onClick={() => denyUser(r.id)}>Deny</button>
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center" }}>
+                  No matching records
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </main>
+    </div>
+  );
+}
