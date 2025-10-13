@@ -1,0 +1,390 @@
+import React, { useMemo, useState } from "react";
+import "./app.css";
+
+export default function UserAdmin() {
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  // ---- Data ---------------------------------------------------------------
+  const initialRows = useMemo(
+    () => [
+      {
+        id: 1,
+        userName: "Lucifer",
+        adGroup: "Wealth compliance",
+        folder: "Compliance",
+        reportName: `KYC reports, AML reports
+Dormant reports`,
+        status: "added",
+        dateISO: "2025-10-12",
+      },
+      {
+        id: 2,
+        userName: "James",
+        adGroup: "Wealth user admin",
+        folder: "Global user",
+        reportName: "Active User, Inactive user",
+        status: "pending",
+        dateISO: "",
+      },
+      {
+        id: 3,
+        userName: "William",
+        adGroup: "Retail compliance",
+        folder: "Compliance",
+        reportName: "Customer risk reports, fraud reports",
+        status: "pending",
+        dateISO: "",
+      },
+      {
+        id: 4,
+        userName: "Johnson",
+        adGroup: "Corporate user",
+        folder: "Corporate",
+        reportName: "Account summary, credit exposure reports",
+        status: "added",
+        dateISO: "2025-10-10",
+      },
+    ],
+    []
+  );
+
+  const [rows, setRows] = useState(initialRows);
+  const [search, setSearch] = useState("");
+  const [filterDate, setFilterDate] = useState(""); // ISO (yyyy-mm-dd) internally
+
+  // ---- Helpers ------------------------------------------------------------
+  const formatDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mmm = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ][d.getMonth()];
+    const yyyy = d.getFullYear();
+    return `${dd}-${mmm}-${yyyy}`;
+  };
+
+  // convert dd-mm-yyyy -> yyyy-mm-dd (for filtering)
+  function toISO(dmy) {
+    const m = /^(\d{2})\s*-\s*(\d{2})\s*-\s*(\d{4})$/.exec(dmy.trim());
+    if (!m) return "";
+    const [, dd, mm, yyyy] = m;
+    const valid = Number(dd) >= 1 && Number(dd) <= 31 && Number(mm) >= 1 && Number(mm) <= 12;
+    if (!valid) return "";
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  // convert yyyy-mm-dd -> dd-mm-yyyy (for showing in the text field)
+  function toDMY(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
+  const resetAll = () => {
+    setRows(initialRows);
+    setSearch("");
+    setFilterDate("");
+  };
+
+  const tagUser = (id) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "added", dateISO: todayISO } : r
+      )
+    );
+  };
+
+  const denyUser = (id) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "denied", dateISO: todayISO } : r
+      )
+    );
+  };
+
+  const filtered = rows.filter((r) => {
+    const hay = `${r.userName} ${r.adGroup} ${r.folder} ${r.reportName}`.toLowerCase();
+    const okText = search ? hay.includes(search.toLowerCase()) : true;
+    const okDate = filterDate ? (r.dateISO ? r.dateISO >= filterDate : false) : true;
+    return okText && okDate;
+  });
+
+  // ---- UI -----------------------------------------------------------------
+  return (
+    <div className="page">
+      {/* Grey rounded header with logo + controls */}
+      <header className="topbar">
+        <img className="logo" src="/SCB_LOGO_1.png" alt="Standard Chartered Logo" />
+        <div className="controls">
+          <button className="home" title="Home" onClick={resetAll} aria-label="Home">🏠</button>
+
+          {/* Exact dd - mm - yyyy field with calendar icon look */}
+          <div className="date-wrap">
+            <span className="cal-icon" aria-hidden>📅</span>
+            <input
+              className="date-text"
+              type="text"
+              inputMode="numeric"
+              placeholder="dd - mm - yyyy"
+              value={toDMY(filterDate)}
+              onChange={(e) => setFilterDate(toISO(e.target.value))}
+              aria-label="Filter by Date Updated"
+              maxLength={12}
+            />
+          </div>
+
+          <input
+            className="search"
+            type="text"
+            placeholder="Search user"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search by name, AD group, folder, report"
+          />
+        </div>
+      </header>
+
+      {/* Title + email */}
+      <section className="identity">
+        <h1>User Admin</h1>
+        <p>admin@gmail.com</p>
+      </section>
+
+      {/* Table heading */}
+      <h2 className="table-title">User Access Requests</h2>
+
+      {/* Table */}
+      <div className="table-wrap">
+        <table className="grid">
+          <thead>
+            <tr>
+              <th>User Name</th>
+              <th>AD Group</th>
+              <th>Folder</th>
+              <th>Report Name</th>
+              <th>Status</th>
+              <th>Date Updated</th>
+              <th style={{ width: 170 }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((r) => (
+              <tr key={r.id}>
+                <td>{r.userName}</td>
+                <td>{r.adGroup}</td>
+                <td>{r.folder}</td>
+                <td className="prewrap">{r.reportName}</td>
+                <td>
+                  {r.status === "added" && (
+                    <span className="pill pill-green">✔ Added to AD</span>
+                  )}
+                  {r.status === "denied" && (
+                    <span className="pill pill-red">Denied</span>
+                  )}
+                  {r.status === "pending" && <span className="muted">pending</span>}
+                </td>
+                <td>{formatDate(r.dateISO)}</td>
+                <td className="actions">
+                  {r.status !== "added" && (
+                    <>
+                      <button className="btn btn-red" onClick={() => denyUser(r.id)}>
+                        Decline
+                      </button>
+                      <button className="btn btn-blue" onClick={() => tagUser(r.id)}>
+                        Tag to AD
+                      </button>
+                    </>
+                  )}
+                  {r.status === "added" && <span className="pill pill-green">✔ Added to AD</span>}
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} className="empty">No matching records</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+-------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+
+:root {
+  --grey-100: #f3f4f6;
+  --border: #e6e6e6;
+  --text: #111827;
+  --green: #16a34a;
+  --red: #ef4444;
+  --blue: #2563eb;
+  --muted: #6b7280;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: var(--text);
+  background: #fff;
+}
+
+.page { padding: 16px 24px 60px; }
+
+/* Top grey rounded bar */
+.topbar {
+  background: var(--grey-100);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  background: transparent;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.home {
+  border: none;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+
+/* Custom date input that shows 'dd - mm - yyyy' */
+.date-wrap { position: relative; }
+.cal-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none;
+}
+.date-text {
+  padding-left: 34px; height: 36px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; width: 160px; outline: none;
+}
+
+.search {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+  width: 280px;
+}
+
+/* Title + email */
+.identity { margin-top: 28px; }
+.identity h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 700;
+}
+.identity p { margin: 0; color: #333; }
+
+/* Table heading */
+.table-title {
+  margin: 28px 0 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Table */
+.table-wrap { border-top: 2px solid #111; margin-top: 8px; }
+.grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.grid thead th {
+  text-align: left;
+  font-weight: 700;
+  background: #fff;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.grid tbody td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.grid tbody tr:last-child td { border-bottom: none; }
+
+.prewrap { white-space: pre-wrap; }
+
+/* Status pills */
+.pill {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  border: 1px solid transparent;
+  user-select: none;
+}
+.pill-green {
+  background: #e8f7ee;
+  color: #0a7f35;
+  border-color: #b6e2c8;
+}
+.pill-red {
+  background: #fde8e8;
+  color: #b91c1c;
+  border-color: #f5b5b5;
+}
+.muted { color: var(--muted); }
+
+/* Action buttons */
+.actions { display: flex; gap: 8px; align-items: center; }
+.btn {
+  border: none;
+  border-radius: 8px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #fff;
+}
+.btn-red { background: var(--red); }
+.btn-blue { background: var(--blue); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px 12px;
+}
