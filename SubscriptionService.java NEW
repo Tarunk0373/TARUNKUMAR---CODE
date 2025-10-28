@@ -1,0 +1,101 @@
+package com.scb.rwtoolbackend.service;
+
+import com.scb.rwtoolbackend.model.Subscription;
+import com.scb.rwtoolbackend.repository.SubscriptionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class SubscriptionService {
+
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
+
+    // ✅ Fetch all subscriptions for all users
+    public List<Subscription> getAllSubscriptions() {
+        return subscriptionRepository.findAll();
+    }
+
+    // ✅ Fetch subscriptions by username
+    public List<Subscription> getSubscriptionsByUsername(String username) {
+        return subscriptionRepository.findByUsername(username);
+    }
+
+    // ✅ Fetch all subscriptions under a specific group
+    public List<Subscription> getSubscriptionsByGroup(String groupName) {
+        return subscriptionRepository.findByGroupName(groupName);
+    }
+
+    // ✅ Create or save a subscription
+    public Subscription saveSubscription(Subscription subscription) {
+        return subscriptionRepository.save(subscription);
+    }
+
+    // ✅ Handle a subscription request from a user
+    public String requestSubscription(String username, String groupName) {
+        // Check if a record already exists
+        Subscription existing = subscriptionRepository.findByUsernameAndGroupName(username, groupName);
+
+        if (existing != null) {
+            if (existing.getStatus().equalsIgnoreCase("Subscribed")) {
+                return "You are already subscribed to " + groupName;
+            } else if (existing.getStatus().equalsIgnoreCase("Pending")) {
+                return "Your request for " + groupName + " is still pending approval.";
+            } else {
+                existing.setStatus("Pending");
+                subscriptionRepository.save(existing);
+                return "Subscription request re-submitted for approval.";
+            }
+        }
+
+        // Create a new record
+        Subscription newSub = new Subscription();
+        newSub.setUsername(username);
+        newSub.setGroupName(groupName);
+        newSub.setStatus("Pending");
+        newSub.setDescription("Awaiting admin approval for access to " + groupName);
+        subscriptionRepository.save(newSub);
+
+        return "Subscription request sent successfully for " + groupName;
+    }
+
+    // ✅ Approve a subscription (used by admin)
+    public String approveSubscription(Long id) {
+        Optional<Subscription> opt = subscriptionRepository.findById(id);
+        if (opt.isPresent()) {
+            Subscription sub = opt.get();
+            sub.setStatus("Subscribed");
+            subscriptionRepository.save(sub);
+            return "Subscription approved for " + sub.getUsername() + " - " + sub.getGroupName();
+        } else {
+            return "Subscription not found.";
+        }
+    }
+
+    // ✅ Reject a subscription (used by admin)
+    public String rejectSubscription(Long id) {
+        Optional<Subscription> opt = subscriptionRepository.findById(id);
+        if (opt.isPresent()) {
+            Subscription sub = opt.get();
+            sub.setStatus("Rejected");
+            subscriptionRepository.save(sub);
+            return "Subscription rejected for " + sub.getUsername() + " - " + sub.getGroupName();
+        } else {
+            return "Subscription not found.";
+        }
+    }
+
+    // ✅ Delete a subscription (optional cleanup)
+    public String deleteSubscription(Long id) {
+        Optional<Subscription> opt = subscriptionRepository.findById(id);
+        if (opt.isPresent()) {
+            subscriptionRepository.deleteById(id);
+            return "Subscription deleted successfully.";
+        } else {
+            return "Subscription not found.";
+        }
+    }
+}
