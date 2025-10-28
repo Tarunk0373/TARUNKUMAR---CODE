@@ -1,0 +1,53 @@
+package com.scb.rwtoolbackend.controller;
+
+import com.scb.rwtoolbackend.model.Subscription;
+import com.scb.rwtoolbackend.service.SubscriptionService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/subscriptions")
+@CrossOrigin(origins = "http://localhost:3000") // frontend port adjust if needed
+public class SubscriptionController {
+
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+    // ✅ Fetch all groups (Subscribed / Unsubscribed / Pending) for a given user
+    @GetMapping("/groups/{username}")
+    public ResponseEntity<List<Subscription>> getAllGroupsByUser(@PathVariable String username) {
+        List<Subscription> groups = subscriptionService.getGroupsByUser(username);
+        return ResponseEntity.ok(groups);
+    }
+
+    // ✅ Handle new subscription request (from frontend)
+    @PostMapping("/request")
+    public ResponseEntity<String> requestSubscription(@RequestBody Subscription subscription) {
+        if (subscription.getUsername() == null || subscription.getGroupName() == null) {
+            return ResponseEntity.badRequest().body("Username or group name missing");
+        }
+
+        String response = subscriptionService.requestSubscription(
+                subscription.getUsername(),
+                subscription.getGroupName()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ Optional endpoint: get all pending requests
+    @GetMapping("/pending")
+    public ResponseEntity<List<Subscription>> getPendingSubscriptions() {
+        List<Subscription> pending = subscriptionService.getPendingSubscriptions();
+        return ResponseEntity.ok(pending);
+    }
+
+    // ✅ Optional endpoint: admin approval
+    @PostMapping("/approve/{id}")
+    public ResponseEntity<String> approveSubscription(@PathVariable Long id) {
+        String response = subscriptionService.approveSubscription(id);
+        return ResponseEntity.ok(response);
+    }
+}
